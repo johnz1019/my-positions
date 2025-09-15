@@ -40,17 +40,19 @@ const PositionsDisplay: React.FC<PositionsDisplayProps> = ({ addresses }) => {
     // Fetch positions for all addresses in parallel
     const promises = addresses.map(async (address) => {
       try {
-        const response = await fetch('/api/v2/pools.v1.PoolsService/ListPositions', {
+        // 使用 Cloudflare Worker 代理，解决 CORS 问题
+        const proxyUrl = 'https://uniswap-api-proxy.sre2785.workers.dev/api/uniswap/positions';
+        const response = await fetch(proxyUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             address: address,
-            chainIds: [1, 130, 137, 8453, 42161, 10, 56, 43114, 480, 324, 1868, 7777777, 42220, 81457],
+            chainIds: [1, 130, 8453, 42161, 137, 10, 56, 43114, 480, 324, 1868, 7777777, 42220, 81457],
             protocolVersions: ['PROTOCOL_VERSION_V4', 'PROTOCOL_VERSION_V3', 'PROTOCOL_VERSION_V2'],
             positionStatuses: ['POSITION_STATUS_IN_RANGE', 'POSITION_STATUS_OUT_OF_RANGE'],
-            pageSize: 100,
+            pageSize: 25,
             pageToken: '',
             includeHidden: true
           })
