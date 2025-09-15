@@ -1,4 +1,4 @@
-import { Price, Token as UniswapToken } from '@uniswap/sdk-core'
+import { Token as UniswapToken } from '@uniswap/sdk-core'
 import { tickToPrice } from '@uniswap/v3-sdk'
 import JSBI from 'jsbi'
 
@@ -17,9 +17,6 @@ export function sqrtPriceX96ToPrice(
 ): number {
   // 将 sqrtPriceX96 转换为 BigInt
   const sqrtPriceX96Big = JSBI.BigInt(sqrtPriceX96)
-
-  // 2^96
-  const Q96 = JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(96))
 
   // 计算 price = (sqrtPriceX96 / 2^96)^2
   // 这给出的是原始价格（不考虑小数位）
