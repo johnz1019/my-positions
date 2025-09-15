@@ -1,0 +1,110 @@
+.portfolio-summary-compact {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(102, 126, 234, 0.2);
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.summary-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+}
+
+.summary-value.total {
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.summary-value.fees {
+  color: #ffeb3b;
+}
+
+.summary-divider {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.2rem;
+  user-select: none;
+}
+
+.positions-count {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .portfolio-summary-compact {
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .summary-row {
+    gap: 1rem;
+    justify-content: space-between;
+  }
+
+  .summary-item {
+    gap: 0.35rem;
+  }
+
+  .summary-label {
+    font-size: 0.7rem;
+  }
+
+  .summary-value {
+    font-size: 0.95rem;
+  }
+
+  .summary-value.total {
+    font-size: 1.1rem;
+  }
+
+  .summary-divider {
+    display: none;
+  }
+
+  /* Stack on very small screens */
+  @media (max-width: 480px) {
+    .summary-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .summary-item {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .portfolio-summary-compact {
+    background: linear-gradient(135deg, #4a5eb7 0%, #5c3879 100%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+}
