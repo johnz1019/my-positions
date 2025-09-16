@@ -135,12 +135,32 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   }
 
 
-  // 计算当前 tick 在范围内的位置百分比
-  const calculateTickPosition = (currentTick: number, tickLower: number, tickUpper: number): number => {
-    if (currentTick <= tickLower) return 0
-    if (currentTick >= tickUpper) return 100
-    const range = tickUpper - tickLower
-    const position = currentTick - tickLower
+  // 计算当前价格在范围内的位置百分比（基于美元价格）
+  const calculatePricePosition = (): number => {
+    if (!currentPriceDisplay || !minPriceDisplay || !maxPriceDisplay) {
+      // Fallback to tick-based calculation
+      if (!poolData) return 50
+      const currentTick = parseInt(poolData.currentTick)
+      const tickLower = parseInt(poolData.tickLower)
+      const tickUpper = parseInt(poolData.tickUpper)
+
+      if (currentTick <= tickLower) return 0
+      if (currentTick >= tickUpper) return 100
+      const range = tickUpper - tickLower
+      const position = currentTick - tickLower
+      return (position / range) * 100
+    }
+
+    // Calculate based on USD prices
+    const currentPrice = currentPriceDisplay.displayPrice
+    const minPrice = Math.min(minPriceDisplay.displayPrice, maxPriceDisplay.displayPrice)
+    const maxPrice = Math.max(minPriceDisplay.displayPrice, maxPriceDisplay.displayPrice)
+
+    if (currentPrice <= minPrice) return 0
+    if (currentPrice >= maxPrice) return 100
+
+    const range = maxPrice - minPrice
+    const position = currentPrice - minPrice
     return (position / range) * 100
   }
 
@@ -324,7 +344,10 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
                 {minPriceDisplay && maxPriceDisplay && (
                   <div className="range-inline">
                     <span className="range-label">Range:</span>
-                    <span className="range-values">{formatPrice(minPriceDisplay.displayPrice, isStablecoin(minPriceDisplay.quoteSymbol))} - {formatPrice(maxPriceDisplay.displayPrice, isStablecoin(maxPriceDisplay.quoteSymbol))}</span>
+                    <span className="range-values">
+                      {/* Always show range from lower to higher price */}
+                      ${Math.min(minPriceDisplay.displayPrice, maxPriceDisplay.displayPrice).toFixed(2)} - ${Math.max(minPriceDisplay.displayPrice, maxPriceDisplay.displayPrice).toFixed(2)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -334,21 +357,13 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
                     <div
                       className="tick-progress-indicator"
                       style={{
-                        width: `${calculateTickPosition(
-                          parseInt(poolData.currentTick),
-                          parseInt(poolData.tickLower),
-                          parseInt(poolData.tickUpper)
-                        )}%`
+                        width: `${calculatePricePosition()}%`
                       }}
                     />
                   </div>
                 </div>
                 <span className="tick-percent">
-                  {calculateTickPosition(
-                    parseInt(poolData.currentTick),
-                    parseInt(poolData.tickLower),
-                    parseInt(poolData.tickUpper)
-                  ).toFixed(0)}%
+                  {calculatePricePosition().toFixed(0)}%
                 </span>
               </div>
             </div>
