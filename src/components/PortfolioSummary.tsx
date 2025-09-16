@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import type { Position } from '../types/position'
 import { sqrtPriceX96ToPrice, isStablecoin } from '../utils/priceCalculations'
+import { getTokenPrices } from '../utils/tokenPrices'
 import './PortfolioSummary.css'
 
 interface PortfolioSummaryProps {
@@ -8,6 +9,55 @@ interface PortfolioSummaryProps {
 }
 
 const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ positions }) => {
+  const [tokenPrices, setTokenPrices] = useState<{ [address: string]: number }>({})
+  const [uniPrice, setUniPrice] = useState<number>(0)
+
+  // Fetch token prices for all non-stablecoin tokens including UNI
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const tokenAddresses = new Set<string>()
+      let needUniPrice = false
+
+      positions.forEach(position => {
+        const isV4 = position.protocolVersion === 'PROTOCOL_VERSION_V4'
+        const poolData = isV4 ? position.v4Position?.poolPosition : position.v3Position
+
+        if (poolData?.token0 && !isStablecoin(poolData.token0.symbol)) {
+          tokenAddresses.add(poolData.token0.address.toLowerCase())
+        }
+        if (poolData?.token1 && !isStablecoin(poolData.token1.symbol)) {
+          tokenAddresses.add(poolData.token1.address.toLowerCase())
+        }
+
+        // Check if any V4 position has UNI rewards
+        if (isV4 && position.v4Position?.poolPosition?.unclaimedRewardsAmountUni &&
+            parseFloat(position.v4Position.poolPosition.unclaimedRewardsAmountUni) > 0) {
+          needUniPrice = true
+        }
+      })
+
+      if (tokenAddresses.size > 0) {
+        const prices = await getTokenPrices(Array.from(tokenAddresses))
+        const priceMap: { [address: string]: number } = {}
+        Object.entries(prices).forEach(([addr, data]) => {
+          priceMap[addr.toLowerCase()] = data.usd
+        })
+        setTokenPrices(priceMap)
+      }
+
+      // Fetch UNI price if needed
+      if (needUniPrice) {
+        const { getTokenPriceBySymbol } = await import('../utils/tokenPrices')
+        const uniPriceResult = await getTokenPriceBySymbol('UNI')
+        if (uniPriceResult) {
+          setUniPrice(uniPriceResult)
+        }
+      }
+    }
+
+    fetchPrices()
+  }, [positions])
+
   const totals = useMemo(() => {
     let totalPositionValue = 0
     let totalFeesValue = 0
@@ -36,14 +86,32 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ positions }) => {
       let token0Price = 0
       let token1Price = 0
 
-      if (token1IsStable) {
+      // Try to get prices from CoinGecko first
+      const token0ApiPrice = tokenPrices[token0.address.toLowerCase()]
+      const token1ApiPrice = tokenPrices[token1.address.toLowerCase()]
+
+      if (token0ApiPrice && token1ApiPrice) {
+        // Both tokens have API prices
+        token0Price = token0ApiPrice
+        token1Price = token1ApiPrice
+      } else if (token1IsStable) {
+        // Token1 is stablecoin, calculate token0 price
         token0Price = currentPriceFromSqrt
         token1Price = 1
       } else if (token0IsStable) {
+        // Token0 is stablecoin, calculate token1 price
         token0Price = 1
         token1Price = 1 / currentPriceFromSqrt
+      } else if (token0ApiPrice && !token1ApiPrice) {
+        // Only token0 has API price, calculate token1 price
+        token0Price = token0ApiPrice
+        token1Price = token0ApiPrice / currentPriceFromSqrt
+      } else if (!token0ApiPrice && token1ApiPrice) {
+        // Only token1 has API price, calculate token0 price
+        token1Price = token1ApiPrice
+        token0Price = token1ApiPrice * currentPriceFromSqrt
       } else {
-        // Can't calculate USD value without a stablecoin
+        // No price data available
         return
       }
 
@@ -60,9 +128,22 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ positions }) => {
       const fee0Value = formatTokenValue(poolData.token0UncollectedFees, token0.decimals, token0Price)
       const fee1Value = formatTokenValue(poolData.token1UncollectedFees, token1.decimals, token1Price)
 
-      if (token0Value > 0 || token1Value > 0 || fee0Value > 0 || fee1Value > 0) {
+      // Calculate UNI rewards value for V4 positions
+      let uniRewardsValue = 0
+      if (isV4 && position.v4Position?.poolPosition?.unclaimedRewardsAmountUni && uniPrice > 0) {
+        const uniAmount = parseFloat(position.v4Position.poolPosition.unclaimedRewardsAmountUni)
+        if (uniAmount > 0) {
+          uniRewardsValue = formatTokenValue(
+            position.v4Position.poolPosition.unclaimedRewardsAmountUni,
+            18, // UNI has 18 decimals
+            uniPrice
+          )
+        }
+      }
+
+      if (token0Value > 0 || token1Value > 0 || fee0Value > 0 || fee1Value > 0 || uniRewardsValue > 0) {
         totalPositionValue += token0Value + token1Value
-        totalFeesValue += fee0Value + fee1Value
+        totalFeesValue += fee0Value + fee1Value + uniRewardsValue
         positionsWithValue++
       }
     })
@@ -74,13 +155,12 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ positions }) => {
       positionsWithValue,
       totalPositions: positions.length
     }
-  }, [positions])
+  }, [positions, tokenPrices, uniPrice])
 
   const formatUsdValue = (value: number): string => {
     if (value < 1) return `$${value.toFixed(2)}`
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`
-    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`
-    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    // 显示完整数字，使用逗号分隔千位
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   return (

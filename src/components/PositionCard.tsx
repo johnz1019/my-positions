@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import type { Position } from '../types/position'
 import { calculatePriceRange, formatPrice, sqrtPriceX96ToPrice, getPriceDisplay, isStablecoin } from '../utils/priceCalculations'
+import { getTokenPrices, getTokenPriceBySymbol } from '../utils/tokenPrices'
 import './PositionCard.css'
 
 interface PositionCardProps {
@@ -10,6 +12,9 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   // 兼容 v3 和 v4 positions
   const isV4 = position.protocolVersion === 'PROTOCOL_VERSION_V4'
   const poolData = isV4 ? position.v4Position?.poolPosition : position.v3Position
+
+  const [tokenPrices, setTokenPrices] = useState<{ [address: string]: number }>({})
+  const [uniPrice, setUniPrice] = useState<number>(0)
 
   // Debug positions
   console.log(`${isV4 ? 'V4' : 'V3'} Position Debug:`, {
@@ -27,6 +32,40 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   // 从 position 获取 token 信息
   const token0 = poolData?.token0
   const token1 = poolData?.token1
+
+  // Fetch token prices including UNI
+  useEffect(() => {
+    const fetchPrices = async () => {
+      const addresses = []
+
+      if (token0 && !isStablecoin(token0.symbol)) {
+        addresses.push(token0.address.toLowerCase())
+      }
+      if (token1 && !isStablecoin(token1.symbol)) {
+        addresses.push(token1.address.toLowerCase())
+      }
+
+      if (addresses.length > 0) {
+        const prices = await getTokenPrices(addresses)
+        const priceMap: { [address: string]: number } = {}
+        Object.entries(prices).forEach(([addr, data]) => {
+          priceMap[addr.toLowerCase()] = data.usd
+        })
+        setTokenPrices(priceMap)
+      }
+
+      // Fetch UNI price if there are UNI rewards
+      if (isV4 && position.v4Position?.poolPosition?.unclaimedRewardsAmountUni &&
+          parseFloat(position.v4Position.poolPosition.unclaimedRewardsAmountUni) > 0) {
+        const uniPriceResult = await getTokenPriceBySymbol('UNI')
+        if (uniPriceResult) {
+          setUniPrice(uniPriceResult)
+        }
+      }
+    }
+
+    fetchPrices()
+  }, [token0, token1, isV4, position])
 
   // 计算价格
   const priceInfo = poolData && token0 && token1 ? calculatePriceRange(
@@ -123,10 +162,22 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
     const token0IsStable = isStablecoin(token0.symbol)
     const token1IsStable = isStablecoin(token1.symbol)
 
+    // Try to get prices from CoinGecko first
+    const token0ApiPrice = tokenPrices[token0.address.toLowerCase()]
+    const token1ApiPrice = tokenPrices[token1.address.toLowerCase()]
+
+    if (token0ApiPrice && token1ApiPrice) {
+      // Both tokens have API prices
+      return {
+        token0Price: token0ApiPrice,
+        token1Price: token1ApiPrice
+      }
+    }
+
     // 如果 token1 是稳定币，price 是 1 token0 = price token1 (USD)
     if (token1IsStable) {
       return {
-        token0Price: currentPriceFromSqrt,
+        token0Price: token0ApiPrice || currentPriceFromSqrt,
         token1Price: 1
       }
     }
@@ -135,11 +186,26 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
     if (token0IsStable) {
       return {
         token0Price: 1,
-        token1Price: 1 / currentPriceFromSqrt
+        token1Price: token1ApiPrice || (1 / currentPriceFromSqrt)
       }
     }
 
-    // 如果都不是稳定币，无法计算准确的美元价值
+    // If one token has API price, calculate the other
+    if (token0ApiPrice && !token1ApiPrice) {
+      return {
+        token0Price: token0ApiPrice,
+        token1Price: token0ApiPrice / currentPriceFromSqrt
+      }
+    }
+
+    if (!token0ApiPrice && token1ApiPrice) {
+      return {
+        token0Price: token1ApiPrice * currentPriceFromSqrt,
+        token1Price: token1ApiPrice
+      }
+    }
+
+    // 如果都不是稳定币且没有API价格，无法计算准确的美元价值
     return { token0Price: 0, token1Price: 0 }
   }
 
@@ -151,8 +217,13 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   const fee0UsdValue = calculateTokenUsdValue(poolData?.token0UncollectedFees, token0?.decimals, token0Price)
   const fee1UsdValue = calculateTokenUsdValue(poolData?.token1UncollectedFees, token1?.decimals, token1Price)
 
+  // Calculate UNI rewards value
+  const uniRewardsUsdValue = isV4 && position.v4Position?.poolPosition?.unclaimedRewardsAmountUni && uniPrice > 0
+    ? calculateTokenUsdValue(position.v4Position.poolPosition.unclaimedRewardsAmountUni, 18, uniPrice)
+    : 0
+
   const totalTokensUsdValue = token0UsdValue + token1UsdValue
-  const totalFeesUsdValue = fee0UsdValue + fee1UsdValue
+  const totalFeesUsdValue = fee0UsdValue + fee1UsdValue + uniRewardsUsdValue
   const totalPositionValue = totalTokensUsdValue + totalFeesUsdValue
 
   // If no pool data at all, show minimal card
@@ -320,6 +391,9 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
                       }
                       <span className="uni-reward-inline">
                         {formatTokenAmount(position.v4Position.poolPosition.unclaimedRewardsAmountUni, 18)} UNI
+                        {uniPrice > 0 && (
+                          <span className="token-usd"> (${uniRewardsUsdValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })})</span>
+                        )}
                       </span>
                     </>
                   )}
