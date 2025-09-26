@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "debug:swap": "tsx src/examples/testSwapPnL.ts",
-    "debug:positions": "tsx src/examples/testPositionsService.ts"
+    "debug:positions": "tsx src/examples/testPositionsService.ts",
+    "debug:combined": "tsx src/examples/testCombinedPnL.ts"
   },
   "dependencies": {
     "@types/bs58": "^5.0.0",

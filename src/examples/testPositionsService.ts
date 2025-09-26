@@ -76,6 +76,9 @@ async function testUniswapPositionsService() {
         const netToken0 = withdrawn0 + collectedFees0 - deposited0;
         const netToken1 = withdrawn1 + collectedFees1 - deposited1;
 
+        // 计算均价 (Token0/Token1)
+        const avgPrice = netToken1 !== 0 ? Math.abs(netToken0 / netToken1).toFixed(2) : 'N/A';
+
         return {
           'Token ID': position.id,
           'Pool': `${position.pool.token0.symbol}/${position.pool.token1.symbol}`,
@@ -85,6 +88,7 @@ async function testUniswapPositionsService() {
           'Fees Token1': collectedFees1.toFixed(6),
           'Net Token0': netToken0.toFixed(2),
           'Net Token1': netToken1.toFixed(6),
+          'Avg Price': avgPrice,
           'Deposited Token0': deposited0.toFixed(2),
           'Deposited Token1': deposited1.toFixed(6)
         };
@@ -130,6 +134,9 @@ async function testUniswapPositionsService() {
       netPnL1: 0
     });
 
+    // 计算总体均价
+    const overallAvgPrice = summary.netPnL1 !== 0 ? Math.abs(summary.netPnL0 / summary.netPnL1).toFixed(2) : 'N/A';
+
     console.table([{
       'Metric': 'Total Positions',
       'Value': summary.totalPositions
@@ -163,6 +170,9 @@ async function testUniswapPositionsService() {
     }, {
       'Metric': 'Net PnL Token1 (Closed)',
       'Value': summary.netPnL1.toFixed(6)
+    }, {
+      'Metric': 'Overall Avg Price (Token0/Token1)',
+      'Value': overallAvgPrice
     }]);
 
 

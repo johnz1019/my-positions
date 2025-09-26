@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
+import fs from 'fs/promises';
+import path from 'path';
 
 export interface EtherscanTransaction {
   blockNumber: string;
@@ -54,14 +56,48 @@ export class SwapPnLService {
   private etherscanApiKey: string;
   private rpcProvider: ethers.JsonRpcProvider;
   private baseUrl = 'https://api.etherscan.io/v2/api';
+  private cacheDir: string;
 
-  constructor(etherscanApiKey: string, rpcUrl?: string) {
+  constructor(etherscanApiKey: string, rpcUrl?: string, cacheDir = '.cache') {
     this.etherscanApiKey = etherscanApiKey;
     this.rpcProvider = new ethers.JsonRpcProvider(rpcUrl || 'https://eth.llamarpc.com');
+    this.cacheDir = cacheDir;
   }
 
   // OrderRecord event signature: OrderRecord(address,address,address,uint256,uint256)
   private readonly ORDER_RECORD_TOPIC = ethers.id('OrderRecord(address,address,address,uint256,uint256)');
+
+  private async ensureCacheDir(): Promise<void> {
+    try {
+      await fs.mkdir(this.cacheDir, { recursive: true });
+    } catch (error) {
+      console.warn('Failed to create cache directory:', error);
+    }
+  }
+
+  private getCacheFilePath(transactionHash: string): string {
+    return path.join(this.cacheDir, `receipt_${transactionHash}.json`);
+  }
+
+  private async loadReceiptFromCache(transactionHash: string): Promise<any | null> {
+    try {
+      const cacheFile = this.getCacheFilePath(transactionHash);
+      const data = await fs.readFile(cacheFile, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private async saveReceiptToCache(transactionHash: string, receipt: any): Promise<void> {
+    try {
+      await this.ensureCacheDir();
+      const cacheFile = this.getCacheFilePath(transactionHash);
+      await fs.writeFile(cacheFile, JSON.stringify(receipt, null, 2));
+    } catch (error) {
+      console.warn('Failed to save receipt to cache:', error);
+    }
+  }
 
   async getTransactionsByAddress(address: string, chainId: number, startBlock = 0, endBlock = 99999999): Promise<EtherscanTransaction[]> {
     try {
@@ -105,9 +141,43 @@ export class SwapPnLService {
 
   async parseOrderRecordEvents(transactionHash: string): Promise<OrderRecord[]> {
     try {
-      const receipt = await this.rpcProvider.getTransactionReceipt(transactionHash);
+      // Check file cache first
+      let receipt = await this.loadReceiptFromCache(transactionHash);
+
       if (!receipt) {
-        throw new Error(`Receipt not found for transaction ${transactionHash}`);
+        console.log(`Fetching receipt for ${transactionHash}`);
+        const rawReceipt = await this.rpcProvider.getTransactionReceipt(transactionHash);
+        if (!rawReceipt) {
+          throw new Error(`Receipt not found for transaction ${transactionHash}`);
+        }
+
+        // Convert receipt to plain object for caching
+        receipt = {
+          blockNumber: rawReceipt.blockNumber,
+          blockHash: rawReceipt.blockHash,
+          transactionIndex: rawReceipt.index,
+          transactionHash: rawReceipt.hash,
+          from: rawReceipt.from,
+          to: rawReceipt.to,
+          gasUsed: rawReceipt.gasUsed.toString(),
+          gasPrice: rawReceipt.gasPrice?.toString() || '0',
+          logs: rawReceipt.logs.map(log => ({
+            address: log.address,
+            topics: log.topics,
+            data: log.data,
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            transactionIndex: log.transactionIndex,
+            blockHash: log.blockHash,
+            logIndex: log.index,
+            removed: log.removed
+          }))
+        };
+
+        // Save to cache
+        await this.saveReceiptToCache(transactionHash, receipt);
+      } else {
+        console.log(`Using cached receipt for ${transactionHash}`);
       }
 
       const orderRecords: OrderRecord[] = [];
@@ -265,6 +335,11 @@ export class SwapPnLService {
 
   async getTokenInfo(tokenAddress: string): Promise<{symbol: string, decimals: number}> {
     try {
+      // Handle native ETH address
+      if (tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        return { symbol: 'ETH', decimals: 18 };
+      }
+
       // Basic ERC20 ABI for symbol and decimals
       const erc20Abi = [
         'function symbol() view returns (string)',

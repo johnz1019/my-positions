@@ -28,21 +28,94 @@ async function testSwapPnLService() {
     console.log(`   • Total gas cost: ${swapService.formatEther(pnlData.totalGasCost.toString())} ETH`);
 
     if (pnlData.transactions.length > 0) {
-      console.log('\n🔄 Recent Swap Transactions:');
+      console.log('\n🔄 All Swap Transactions:');
+
+      // 定义基础代币和资产代币地址
+      const USDT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955'; // BSC USDT
+      const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // Native ETH
+
       console.table(
-        pnlData.transactions.slice(0, 10).map((tx, index) => ({
-          '#': index + 1,
-          'Tx Hash': tx.transactionHash.slice(0, 10) + '...',
-          'From Token': tx.fromToken.slice(0, 8) + '...',
-          'To Token': tx.toToken.slice(0, 8) + '...',
-          'From Amount': swapService.formatTokenAmount(tx.fromAmount),
-          'Return Amount': swapService.formatTokenAmount(tx.returnAmount),
-          'Timestamp': new Date(parseInt(tx.timestamp) * 1000).toISOString().slice(0, 19).replace('T', ' ')
-        }))
+        pnlData.transactions.map((tx, index) => {
+          // 判断买卖方向和计算均价
+          const fromTokenLower = tx.fromToken.toLowerCase();
+          const toTokenLower = tx.toToken.toLowerCase();
+          const usdtLower = USDT_ADDRESS.toLowerCase();
+          const ethLower = ETH_ADDRESS.toLowerCase();
+
+          let direction = '';
+          let avgPrice = '';
+
+          if (fromTokenLower === usdtLower && toTokenLower === ethLower) {
+            // USDT -> ETH = 买入
+            direction = 'BUY';
+            const usdtAmount = parseFloat(swapService.formatTokenAmount(tx.fromAmount, 18));
+            const ethAmount = parseFloat(swapService.formatTokenAmount(tx.returnAmount, 18));
+            avgPrice = ethAmount > 0 ? (usdtAmount / ethAmount).toFixed(2) : '0';
+          } else if (fromTokenLower === ethLower && toTokenLower === usdtLower) {
+            // ETH -> USDT = 卖出
+            direction = 'SELL';
+            const ethAmount = parseFloat(swapService.formatTokenAmount(tx.fromAmount, 18));
+            const usdtAmount = parseFloat(swapService.formatTokenAmount(tx.returnAmount, 18));
+            avgPrice = ethAmount > 0 ? (usdtAmount / ethAmount).toFixed(2) : '0';
+          } else if (toTokenLower === ethLower || toTokenLower.includes('eth')) {
+            // 其他代币 -> ETH类 = 买入ETH
+            direction = 'BUY';
+            avgPrice = 'N/A';
+          } else if (fromTokenLower === ethLower || fromTokenLower.includes('eth')) {
+            // ETH类 -> 其他代币 = 卖出ETH
+            direction = 'SELL';
+            avgPrice = 'N/A';
+          } else {
+            direction = 'SWAP';
+            avgPrice = 'N/A';
+          }
+
+          return {
+            '#': index + 1,
+            'Direction': direction,
+            'Tx Hash': tx.transactionHash.slice(0, 10) + '...',
+            'From Token': tx.fromToken.slice(0, 8) + '...',
+            'To Token': tx.toToken.slice(0, 8) + '...',
+            'From Amount': swapService.formatTokenAmount(tx.fromAmount),
+            'Return Amount': swapService.formatTokenAmount(tx.returnAmount),
+            'Avg Price': avgPrice !== 'N/A' ? `$${avgPrice}` : avgPrice,
+            'Timestamp': new Date(parseInt(tx.timestamp) * 1000).toISOString().slice(0, 19).replace('T', ' ')
+          };
+        })
       );
 
       console.log('\n💰 Token Summary:');
       const tokenEntries = Object.entries(pnlData.tokenSummary).slice(0, 10);
+
+      // 查找实际的USDT和ETH代币地址
+      let usdtSummary = null;
+      let ethSummary = null;
+
+      for (const [address, summary] of Object.entries(pnlData.tokenSummary)) {
+        if (address.toLowerCase().includes('55d398') || address.toLowerCase().includes('usdt')) {
+          usdtSummary = summary;
+        }
+        if (address.toLowerCase().includes('eeeeee') || address.toLowerCase().includes('eth')) {
+          ethSummary = summary;
+        }
+      }
+
+      const calculateNetAvgPrice = () => {
+        if (!usdtSummary || !ethSummary) return 'N/A';
+
+        const usdtNetFloat = parseFloat(swapService.formatTokenAmount(usdtSummary.netAmount.toString(), 18));
+        const ethNetFloat = parseFloat(swapService.formatTokenAmount(ethSummary.netAmount.toString(), 18));
+
+        if (ethNetFloat === 0) return 'N/A';
+        return Math.abs(usdtNetFloat / ethNetFloat).toFixed(2);
+      };
+
+      const netAvgPrice = calculateNetAvgPrice();
+
+      // 先显示净均价信息
+      console.log(`\n📊 Net Average Price (USDT/ETH): ${netAvgPrice !== 'N/A' ? `$${netAvgPrice}` : netAvgPrice}`);
+      if (usdtSummary) console.log(`   USDT Net: ${swapService.formatTokenAmount(usdtSummary.netAmount.toString(), 18)}`);
+      if (ethSummary) console.log(`   ETH Net: ${swapService.formatTokenAmount(ethSummary.netAmount.toString(), 18)}`);
 
       for (const [tokenAddress, summary] of tokenEntries) {
         console.log(`\nToken: ${tokenAddress.slice(0, 8)}...`);
