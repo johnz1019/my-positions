@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "debug:swap": "tsx src/examples/testSwapPnL.ts",
+    "debug:positions": "tsx src/examples/testPositionsService.ts"
   },
   "dependencies": {
     "@types/bs58": "^5.0.0",

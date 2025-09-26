@@ -249,7 +249,7 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   // If no pool data at all, show minimal card
   if (!poolData) {
     return (
-      <div className="position-card">
+      <div className={`position-card ${position.status === 'POSITION_STATUS_OUT_OF_RANGE' ? 'out-of-range' : ''}`}>
         <div className="position-header">
           <div className="header-left">
             <div className="token-pair">
@@ -274,7 +274,7 @@ const PositionCard: React.FC<PositionCardProps> = ({ position }) => {
   }
 
   return (
-    <div className="position-card">
+    <div className={`position-card ${position.status === 'POSITION_STATUS_OUT_OF_RANGE' ? 'out-of-range' : ''}`}>
       <div className="position-header">
         <div className="header-left">
           <div className="token-pair">
