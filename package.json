@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "debug:swap": "tsx src/examples/testSwapPnL.ts",
     "debug:positions": "tsx src/examples/testPositionsService.ts",
-    "debug:combined": "tsx src/examples/testCombinedPnL.ts"
+    "debug:combined": "tsx src/examples/testCombinedPnL.ts",
+    "debug:bsc": "tsx src/examples/testBscPnL.ts",
+    "debug:base": "tsx src/examples/testBasePnL.ts"
   },
   "dependencies": {
     "@types/bs58": "^5.0.0",
@@ -18,7 +20,8 @@
     "@uniswap/v3-sdk": "^3.25.2",
     "jsbi": "^4.3.2",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

@@ -15,11 +15,54 @@
   margin-bottom: 1rem;
 }
 
+.nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.main-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-link {
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  color: #666;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: #007bff;
+  background: #f8f9fa;
+}
+
+.nav-link.active {
+  color: #007bff;
+  background: #e7f3ff;
+  font-weight: 600;
+}
+
 h1 {
-  margin: 0 0 1rem 0;
+  margin: 0;
   color: #333;
   font-size: 1.75rem;
   font-weight: 600;
+}
+
+.app-content {
+  padding: 0 2rem;
+}
+
+.no-addresses {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
 }
 
 /* Search Section */
