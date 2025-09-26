@@ -57,21 +57,46 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
-.chain-select {
-  padding: 8px 12px;
+.chain-buttons {
+  display: flex;
   border: 1px solid #ced4da;
   border-radius: 4px;
-  font-size: 14px;
-  background: white;
-  min-width: 100px;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
+  overflow: hidden;
 }
 
-.chain-select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+.chain-btn {
+  padding: 8px 16px;
+  border: none;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  position: relative;
+}
+
+.chain-btn:not(:last-child) {
+  border-right: 1px solid #ced4da;
+}
+
+.chain-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+}
+
+.chain-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.chain-btn.active {
+  background: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.chain-btn.active:hover {
+  background: #0056b3;
 }
 
 .refresh-btn {
@@ -409,8 +434,7 @@
     width: 100%;
   }
 
-  .chain-select {
-    min-width: auto;
+  .chain-buttons {
     width: 100%;
   }
 

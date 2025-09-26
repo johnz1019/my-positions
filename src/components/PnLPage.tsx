@@ -134,16 +134,23 @@ function PnLPage({ address: initialAddress = '0x6D530C88f583478fdc2E553F872bbe6d
               />
             </div>
             <div className="control-group">
-              <label htmlFor="chain-select-empty">Chain:</label>
-              <select
-                id="chain-select-empty"
-                value={selectedChain}
-                onChange={(e) => setSelectedChain(e.target.value)}
-                className="chain-select"
-              >
-                <option value="bsc">BSC</option>
-                <option value="base">Base</option>
-              </select>
+              <label>Chain:</label>
+              <div className="chain-buttons">
+                <button
+                  className={`chain-btn ${selectedChain === 'bsc' ? 'active' : ''}`}
+                  onClick={() => setSelectedChain('bsc')}
+                  disabled={loading}
+                >
+                  BSC
+                </button>
+                <button
+                  className={`chain-btn ${selectedChain === 'base' ? 'active' : ''}`}
+                  onClick={() => setSelectedChain('base')}
+                  disabled={loading}
+                >
+                  Base
+                </button>
+              </div>
             </div>
             <button
               onClick={() => window.location.reload()}
@@ -180,16 +187,23 @@ function PnLPage({ address: initialAddress = '0x6D530C88f583478fdc2E553F872bbe6d
             />
           </div>
           <div className="control-group">
-            <label htmlFor="chain-select">Chain:</label>
-            <select
-              id="chain-select"
-              value={selectedChain}
-              onChange={(e) => setSelectedChain(e.target.value)}
-              className="chain-select"
-            >
-              <option value="bsc">BSC</option>
-              <option value="base">Base</option>
-            </select>
+            <label>Chain:</label>
+            <div className="chain-buttons">
+              <button
+                className={`chain-btn ${selectedChain === 'bsc' ? 'active' : ''}`}
+                onClick={() => setSelectedChain('bsc')}
+                disabled={loading}
+              >
+                BSC
+              </button>
+              <button
+                className={`chain-btn ${selectedChain === 'base' ? 'active' : ''}`}
+                onClick={() => setSelectedChain('base')}
+                disabled={loading}
+              >
+                Base
+              </button>
+            </div>
           </div>
           <button
             onClick={() => window.location.reload()}
