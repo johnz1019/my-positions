@@ -4,21 +4,16 @@
   border-radius: 12px;
   padding: 0.75rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.3s;
-}
-
-.position-card.out-of-range {
-  border: 2px solid #ff5252;
-  box-shadow: 0 2px 12px rgba(255, 82, 82, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .position-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.position-card.out-of-range:hover {
-  box-shadow: 0 4px 20px rgba(255, 82, 82, 0.25);
 }
 
 /* Header */
@@ -374,10 +369,29 @@
 @media (max-width: 768px) {
   .position-card {
     padding: 0.5rem;
+    margin: 0;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .position-header {
+    flex-wrap: wrap;
+    gap: 0.25rem;
   }
 
   .token-pair {
     font-size: 0.9rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .header-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .header-right {
+    min-width: 0;
   }
 
   .value-summary {
@@ -389,6 +403,7 @@
   .value-item {
     width: 100%;
     justify-content: space-between;
+    min-width: 0;
   }
 
   .value-item.total {
@@ -403,15 +418,47 @@
     flex-direction: column;
     gap: 0.4rem;
     align-items: stretch;
+    overflow: hidden;
+  }
+
+  .price-info-compact {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .current-price-inline, .range-inline {
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    min-width: 0;
   }
 
   .tick-progress-inline {
     width: 100%;
     justify-content: space-between;
+    min-width: 0;
   }
 
   .tick-progress-bar-small {
     flex: 1;
+    min-width: 60px;
+  }
+
+  .assets-section {
+    overflow: hidden;
+  }
+
+  .asset-row {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .asset-label,
+  .asset-amount,
+  .asset-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
